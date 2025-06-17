@@ -7,29 +7,38 @@ register = template.Library()
 
 @register.inclusion_tag('menus/menu.html', takes_context=True)
 def draw_menu(context, menu_name):
-    current_url = context['request'].path
-    all_items = MenuItem.objects.filter(menu_name=menu_name).select_related('parent')
+    current_path = context['request'].path
+    items = (
+        MenuItem.objects
+        .filter(menu__name=menu_name)
+        .select_related('parent')
+        .order_by('order')
+    )
 
-    # Группируем по parent_id
     children_map = defaultdict(list)
-    item_map = {}
 
-    for item in all_items:
-        item_map[item.id] = item
-        children_map[item.parent_id].append(item)
+    for item in items:
+        item.url = item.get_url()
+        item.active = False
+        item.open = False
+        if item.parent_id:
+            children_map[item.parent_id].append(item)
 
-    def build_tree(parent_id=None, active_path=None):
-        items = []
-        for item in children_map.get(parent_id, []):
-            item_url = item.get_absolute_url()
-            is_active = (item_url == current_url)
-            children = build_tree(item.id, active_path)
-            items.append({
-                'item': item,
-                'children': children,
-                'is_active': is_active or any(child['is_active'] for child in children),
-            })
-        return items
+    for item in items:
+        item.child_nodes = children_map.get(item.id, [])
 
-    tree = build_tree()
-    return {'menu_tree': tree}
+    def mark_active_branch(item):
+        if item.url == current_path:
+            item.active = True
+            return True
+        for child in getattr(item, 'child_nodes', []):
+            if mark_active_branch(child):
+                item.open = True
+                return True
+        return False
+
+    root_items = [item for item in items if item.parent is None]
+    for item in root_items:
+        mark_active_branch(item)
+
+    return {'menu': root_items}
