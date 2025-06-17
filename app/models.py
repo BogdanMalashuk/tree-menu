@@ -3,6 +3,9 @@ from django.urls import reverse, NoReverseMatch
 
 
 class Menu(models.Model):
+    """
+    Модель меню, которое может содержать множество пунктов (MenuItem).
+    """
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -10,6 +13,10 @@ class Menu(models.Model):
 
 
 class MenuItem(models.Model):
+    """
+    Пункт меню, может быть частью другого пункта (рекурсивная структура).
+    Поддерживает как прямой URL, так и именованный путь Django.
+    """
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='items')
     title = models.CharField(max_length=100)
     url = models.CharField(max_length=200, blank=True)
@@ -21,6 +28,11 @@ class MenuItem(models.Model):
         return self.title
 
     def get_url(self):
+        """
+        Возвращает актуальный URL пункта меню.
+        Приоритет: сначала именованный маршрут (named_url), затем прямой url.
+        Если именованный маршрут не найден, возвращается исходная строка.
+        """
         if self.named_url:
             try:
                 return reverse(self.named_url)
