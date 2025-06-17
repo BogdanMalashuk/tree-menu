@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Tree Menu</title>
+    <title>{{ title }}</title>
 </head>
 <body>
-    <h1>Welcome</h1>
-    {% block content %}{% endblock %}
+    {% load menu_tags %}
+
+    <nav>
+        {% draw_menu 'main_menu' %}
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>
